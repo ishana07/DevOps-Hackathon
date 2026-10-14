@@ -418,11 +418,27 @@ def calculate_sla_statistics():
         last_check_row = cursor.fetchone()
         last_check = dict(last_check_row) if last_check_row else None
 
-    # Availability Percentage
+        # Reporting period and record range bounds
+        cursor.execute("SELECT MIN(timestamp) AS start_time, MAX(timestamp) AS end_time FROM checks")
+        bounds_row = cursor.fetchone()
+        start_time = bounds_row["start_time"] if bounds_row else None
+        end_time = bounds_row["end_time"] if bounds_row else None
+
+    # Availability Percentage (Formula: successful_checks / total_checks * 100)
+    # Safe against division by zero on empty dataset
     if total_checks > 0:
         availability_pct = round((successful_checks / total_checks) * 100, 2)
+        start_fmt = start_time.replace("T", " ")[:19] + " UTC" if start_time else ""
+        end_fmt = end_time.replace("T", " ")[:19] + " UTC" if end_time else ""
+        if start_fmt == end_fmt:
+            reporting_period = f"Probed at {start_fmt}"
+        else:
+            reporting_period = f"{start_fmt} – {end_fmt}"
+        record_range = f"All {total_checks} Recorded Samples"
     else:
         availability_pct = 100.0  # Default clean SLA state
+        reporting_period = "No records yet (Awaiting first probe)"
+        record_range = "0 Samples Recorded"
 
     # Downtime Calculation 1: Interval-Sampled Estimated Downtime
     # Assumes each failed check sample represents an outage window of 1 interval
@@ -452,6 +468,11 @@ def calculate_sla_statistics():
         "successful_checks": successful_checks,
         "failed_checks": failed_checks,
         "availability_percentage": availability_pct,
+        "sla_formula": "Availability (%) = (successful checks / total checks) * 100",
+        "record_range": record_range,
+        "reporting_period": reporting_period,
+        "start_time_utc": start_time,
+        "end_time_utc": end_time,
         "average_response_time_ms": avg_time,
         "min_response_time_ms": min_time,
         "max_response_time_ms": max_time,

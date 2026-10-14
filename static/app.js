@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // KPI Cards
     kpiAvailability: document.getElementById('kpi-availability'),
     kpiSlaTier: document.getElementById('kpi-sla-tier'),
+    kpiAvailabilityTrend: document.getElementById('kpi-availability-trend'),
     kpiProgressFill: document.getElementById('kpi-progress-fill'),
     kpiLatency: document.getElementById('kpi-latency'),
     kpiMinLatency: document.getElementById('kpi-min-latency'),
@@ -45,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
     kpiTotalChecks: document.getElementById('kpi-total-checks'),
     kpiPassedChecks: document.getElementById('kpi-passed-checks'),
     kpiFailedChecks: document.getElementById('kpi-failed-checks'),
+    slaRangeLabel: document.getElementById('sla-range-label'),
+    slaPeriodText: document.getElementById('sla-period-text'),
     
     // Controls
     configForm: document.getElementById('config-form'),
@@ -265,6 +268,20 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.kpiAvailability.textContent = `${s.availability_percentage}%`;
     elements.kpiSlaTier.textContent = s.sla_tier || 'SLA';
     elements.kpiProgressFill.style.width = `${Math.min(100, Math.max(0, s.availability_percentage))}%`;
+    
+    if (elements.kpiAvailabilityTrend) {
+      elements.kpiAvailabilityTrend.textContent = s.total_checks > 0
+        ? `${s.successful_checks}/${s.total_checks} UP (${s.availability_percentage}%)`
+        : 'Target: 99.9%';
+    }
+
+    // SLA Formula Section Info
+    if (elements.slaRangeLabel) {
+      elements.slaRangeLabel.textContent = `Record Range: ${s.record_range || 'All Samples'}`;
+    }
+    if (elements.slaPeriodText) {
+      elements.slaPeriodText.textContent = s.reporting_period || 'All Recorded History';
+    }
 
     // Latency
     elements.kpiLatency.textContent = s.average_response_time_ms ? `${s.average_response_time_ms} ms` : '-- ms';

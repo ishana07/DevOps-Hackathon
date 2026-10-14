@@ -192,6 +192,45 @@ class PulseWatchTestCase(unittest.TestCase):
         self.assertEqual(stats["failed_checks"], 1)
         self.assertEqual(stats["availability_percentage"], 75.0)
 
+    def test_availability_calculation_9_success_1_fail(self):
+        """
+        TASK 2 REQUIREMENT:
+        Test the calculation using 9 successful checks and 1 failed check.
+        Expected availability: 90.0%.
+        Uses isolated temporary database so production history is not touched.
+        """
+        # Insert 9 UP checks (HTTP 200)
+        for i in range(9):
+            app._save_check_record({
+                "timestamp": f"2026-10-14T01:00:{i:02d}.000Z",
+                "endpoint": "https://api.example.com/health",
+                "status_code": 200,
+                "response_time_ms": 40.0 + i,
+                "status": "UP",
+                "error_message": None,
+                "check_type": "AUTOMATIC"
+            })
+
+        # Insert 1 DOWN check (HTTP 500)
+        app._save_check_record({
+            "timestamp": "2026-10-14T01:00:10.000Z",
+            "endpoint": "https://api.example.com/health",
+            "status_code": 500,
+            "response_time_ms": 120.0,
+            "status": "DOWN",
+            "error_message": "HTTP 500: Internal Server Error",
+            "check_type": "AUTOMATIC"
+        })
+
+        stats = app.calculate_sla_statistics()
+        self.assertEqual(stats["total_checks"], 10)
+        self.assertEqual(stats["successful_checks"], 9)
+        self.assertEqual(stats["failed_checks"], 1)
+        self.assertEqual(stats["availability_percentage"], 90.0)
+        self.assertEqual(stats["record_range"], "All 10 Recorded Samples")
+        self.assertIn("UTC", stats["reporting_period"])
+        self.assertEqual(stats["sla_formula"], "Availability (%) = (successful checks / total checks) * 100")
+
     # -------------------------------------------------------------------------
     # 7. Average Response Time Calculations
     # -------------------------------------------------------------------------

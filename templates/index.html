@@ -213,6 +213,54 @@
         </div>
       </section>
 
+      <!-- SLA Formula & Calculation Methodology Section -->
+      <section class="card sla-formula-section" id="sla-formula-section">
+        <div class="sla-formula-header">
+          <div class="sla-formula-title-group">
+            <span class="formula-badge-icon">📐</span>
+            <div class="formula-title-text">
+              <h3>SLA Availability Calculation</h3>
+              <span class="card-subtitle">Formula, status definition, and reporting range</span>
+            </div>
+          </div>
+          <div class="reporting-range-tag">
+            <span class="range-dot"></span>
+            <span id="sla-range-label">Record Range: All 0 Samples</span>
+          </div>
+        </div>
+
+        <div class="sla-formula-body">
+          <div class="formula-math-card">
+            <div class="formula-math-display">
+              <span class="formula-var">Availability (%)</span>
+              <span class="formula-eq">=</span>
+              <div class="formula-fraction">
+                <span class="fraction-num">Successful Checks (HTTP 2xx)</span>
+                <span class="fraction-bar"></span>
+                <span class="fraction-den">Total Checks</span>
+              </div>
+              <span class="formula-times">×</span>
+              <span class="formula-100">100</span>
+            </div>
+          </div>
+
+          <div class="formula-details-grid">
+            <div class="formula-detail-item">
+              <span class="detail-label">Definition of UP (Success):</span>
+              <span class="detail-value text-success">HTTP 2xx (200–299)</span>
+            </div>
+            <div class="formula-detail-item">
+              <span class="detail-label">Definition of DOWN (Failure):</span>
+              <span class="detail-value text-danger">Non-2xx (3xx/4xx/5xx), Timeouts, Network Drops</span>
+            </div>
+            <div class="formula-detail-item">
+              <span class="detail-label">Reporting Period Scope:</span>
+              <span class="detail-value" id="sla-period-text">No records yet (Awaiting first probe)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Endpoint & Control Configuration Panel -->
       <section class="card config-panel" id="config-section">
         <div class="card-header">
