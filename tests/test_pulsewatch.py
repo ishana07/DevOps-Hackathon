@@ -96,6 +96,21 @@ class PulseWatchTestCase(unittest.TestCase):
         self.assertEqual(record["status_code"], 500)
         self.assertIn("500", record["error_message"])
 
+    @patch("requests.get")
+    def test_non_2xx_http_response_503(self, mock_get):
+        """Test health check handling of HTTP 503 Service Unavailable (DOWN)."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 503
+        mock_resp.reason = "Service Unavailable"
+        mock_get.return_value = mock_resp
+
+        record = app.perform_health_check("https://httpbin.org/status/503")
+
+        self.assertEqual(record["status"], "DOWN")
+        self.assertEqual(record["status_code"], 503)
+        self.assertIn("503", record["error_message"])
+        self.assertIn("Service Unavailable", record["error_message"])
+
     # -------------------------------------------------------------------------
     # 3. Connection Errors
     # -------------------------------------------------------------------------
