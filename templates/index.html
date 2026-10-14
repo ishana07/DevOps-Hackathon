@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PulseWatch - Service Availability and SLA Reporter for BIT DevOps Community Hackathon 2026">
+  <title>PulseWatch — Service Availability &amp; SLA Reporter</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- SLA Methodology Modal -->
+  <div id="methodology-modal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">📐 SLA &amp; Downtime Calculation Methodology</h3>
+        <button id="close-modal-btn" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="methodology-section">
+          <h4>1. Availability Percentage Formula</h4>
+          <p class="formula-box">$$\text{Availability } (\%) = \left(\frac{\text{Successful Checks (HTTP 2xx)}}{\text{Total Checks}}\right) \times 100$$</p>
+          <p>A check is strictly classified as <strong>UP</strong> if and only if the HTTP response status code is within the <code>200–299</code> range. Any <code>3xx</code>, <code>4xx</code>, <code>5xx</code>, network drop, timeout, or DNS failure is classified as <strong>DOWN</strong>.</p>
+        </div>
+
+        <div class="methodology-section">
+          <h4>2. Average Response Time</h4>
+          <p class="formula-box">$$\text{Avg Latency (ms)} = \frac{1}{N} \sum_{i=1}^{N} \text{Response Time}_i \quad \text{(for all valid responses)}$$</p>
+          <p>Calculated across all checks where a response was obtained. Connection drops and unresolvable network failures are excluded from latency averaging to prevent skew.</p>
+        </div>
+
+        <div class="methodology-section">
+          <h4>3. Estimated Downtime vs. Continuous Outage</h4>
+          <p class="formula-box">$$\text{Estimated Downtime} = \text{Failed Checks Count} \times \text{Polling Interval (seconds)}$$</p>
+          <div class="warning-callout">
+            <strong>Important Statistical Clarification for Judges:</strong>
+            <p>Interval-sampled monitoring polls at discrete intervals (e.g., every 10s). If 3 consecutive checks fail with a 10s interval, the estimated downtime is <strong>30 seconds</strong>.</p>
+            <p>This is an <em>interval-based estimate</em> because outages that begin or recover between polling moments cannot be observed with sub-second continuous precision without continuous streaming or push-based APM agents.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-ack-btn" class="btn btn-primary">Understood</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <span class="pulse-beacon"></span>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h2>PulseWatch</h2>
+          <span class="badge-version">v1.0 • SLA Suite</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#overview" class="nav-item active">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          Dashboard
+        </a>
+        <a href="#config-section" class="nav-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Endpoint Config
+        </a>
+        <a href="#charts-section" class="nav-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          SLA Analytics
+        </a>
+        <a href="#history-section" class="nav-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Audit History
+        </a>
+        <button id="open-methodology-btn" class="nav-item nav-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          SLA Formulas
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="hackathon-tag">
+          <span class="tag-dot"></span>
+          <div>
+            <div class="tag-title">BIT DevOps 2026</div>
+            <div class="tag-sub">Problem 20 • SLA Reporter</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h1>Service Availability &amp; SLA Monitor</h1>
+          <p class="subtitle">Real-time uptime verification, response latency, and operational SLA tracking</p>
+        </div>
+        <div class="header-right">
+          <div class="live-status-pill" id="live-status-indicator">
+            <span class="status-dot ping-animation"></span>
+            <span id="live-status-text">INITIALIZING</span>
+          </div>
+          <div class="clock-display" id="utc-clock">UTC --:--:--</div>
+        </div>
+      </header>
+
+      <!-- KPI Summary Cards Grid -->
+      <section class="kpi-grid" id="overview">
+        <!-- Card 1: Availability SLA -->
+        <div class="kpi-card card-availability">
+          <div class="kpi-card-header">
+            <span class="kpi-title">Availability SLA</span>
+            <span class="badge-sla" id="kpi-sla-tier">Tier</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number" id="kpi-availability">--%</span>
+            <div class="kpi-trend" id="kpi-availability-trend">Target: 99.9%</div>
+          </div>
+          <div class="kpi-footer-progress">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="kpi-progress-fill" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Average Latency -->
+        <div class="kpi-card card-latency">
+          <div class="kpi-card-header">
+            <span class="kpi-title">Avg Response Time</span>
+            <span class="kpi-icon">⚡</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number" id="kpi-latency">-- ms</span>
+          </div>
+          <div class="kpi-subtext">
+            <span>Min: <b id="kpi-min-latency">--</b></span>
+            <span>•</span>
+            <span>Max: <b id="kpi-max-latency">--</b></span>
+          </div>
+        </div>
+
+        <!-- Card 3: Estimated Downtime -->
+        <div class="kpi-card card-downtime">
+          <div class="kpi-card-header">
+            <span class="kpi-title">Estimated Downtime</span>
+            <button class="info-tooltip-btn" id="downtime-info-btn" title="View calculation methodology">ℹ️</button>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number text-warning" id="kpi-downtime">0s</span>
+          </div>
+          <div class="kpi-subtext">
+            <span>Observed Outage: <b id="kpi-observed-outage">0s</b></span>
+          </div>
+        </div>
+
+        <!-- Card 4: Total Health Checks -->
+        <div class="kpi-card card-checks">
+          <div class="kpi-card-header">
+            <span class="kpi-title">Total Samples</span>
+            <span class="kpi-icon">📊</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-number" id="kpi-total-checks">0</span>
+          </div>
+          <div class="kpi-subtext">
+            <span class="text-success"><b id="kpi-passed-checks">0</b> UP</span>
+            <span>•</span>
+            <span class="text-danger"><b id="kpi-failed-checks">0</b> DOWN</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Endpoint & Control Configuration Panel -->
+      <section class="card config-panel" id="config-section">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Monitoring Configuration</h3>
+            <span class="card-subtitle">Set target service endpoint and automatic polling frequency</span>
+          </div>
+          <div class="card-actions">
+            <button id="toggle-monitoring-btn" class="btn btn-outline">
+              <span id="toggle-monitor-icon">⏸</span>
+              <span id="toggle-monitor-text">Pause Monitor</span>
+            </button>
+            <button id="check-now-btn" class="btn btn-primary pulse-btn">
+              <span id="check-spinner" class="spinner" style="display: none;"></span>
+              <svg id="check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              Check Now
+            </button>
+          </div>
+        </div>
+
+        <form id="config-form" class="config-form">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="endpoint-input">Target Service URL (HTTP / HTTPS)</label>
+              <div class="input-with-icon">
+                <span class="input-prefix">🔗</span>
+                <input 
+                  type="url" 
+                  id="endpoint-input" 
+                  name="endpoint" 
+                  placeholder="https://example.com/health" 
+                  required 
+                  autocomplete="off"
+                >
+              </div>
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="interval-select">Check Frequency</label>
+              <select id="interval-select" name="interval_seconds">
+                <option value="3">Every 3 seconds (High frequency)</option>
+                <option value="5">Every 5 seconds</option>
+                <option value="10" selected>Every 10 seconds (Standard)</option>
+                <option value="30">Every 30 seconds</option>
+                <option value="60">Every 60 seconds (1 minute)</option>
+              </select>
+            </div>
+
+            <div class="form-group btn-align">
+              <button type="submit" id="save-config-btn" class="btn btn-accent">
+                Save &amp; Apply
+              </button>
+            </div>
+          </div>
+
+          <!-- Hackathon Quick Demo Presets -->
+          <div class="demo-presets-row">
+            <span class="presets-label">⚡ Hackathon Demo Presets:</span>
+            <div class="presets-buttons">
+              <button type="button" class="preset-btn preset-success" data-url="/mock/status/200">
+                🟢 200 OK (Healthy)
+              </button>
+              <button type="button" class="preset-btn preset-error" data-url="/mock/status/500">
+                🔴 500 Server Error
+              </button>
+              <button type="button" class="preset-btn preset-warning" data-url="/mock/status/404">
+                🟠 404 Not Found
+              </button>
+              <button type="button" class="preset-btn preset-delay" data-url="/mock/delay/4">
+                🟡 High Latency (4s)
+              </button>
+              <button type="button" class="preset-btn preset-httpbin" data-url="https://httpbin.org/status/200">
+                🌐 Public HTTPBin
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="charts-grid" id="charts-section">
+        <!-- Latency Chart Card -->
+        <div class="card chart-card flex-2">
+          <div class="card-header">
+            <div>
+              <h3>Response Time Timeline (ms)</h3>
+              <span class="card-subtitle">Real-time latency fluctuation over the latest 30 checks</span>
+            </div>
+            <div class="chart-badge" id="chart-latest-latency">-- ms</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="latencyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Uptime Breakdown Doughnut -->
+        <div class="card chart-card flex-1">
+          <div class="card-header">
+            <div>
+              <h3>Health Distribution</h3>
+              <span class="card-subtitle">UP vs DOWN check ratio</span>
+            </div>
+          </div>
+          <div class="chart-container doughnut-wrapper">
+            <canvas id="uptimeDoughnutChart"></canvas>
+            <div class="doughnut-center-text">
+              <div id="doughnut-pct">100%</div>
+              <div class="doughnut-sub">UP</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- History & Audit Log Section -->
+      <section class="card history-card" id="history-section">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>Recent Health Check Audit Log</h3>
+            <span class="card-subtitle">Detailed timestamped records of automatic &amp; manual probes</span>
+          </div>
+          <div class="card-actions">
+            <!-- Filter Pills -->
+            <div class="filter-group">
+              <button class="filter-btn active" data-filter="ALL">All (<span id="count-all">0</span>)</button>
+              <button class="filter-btn text-success" data-filter="UP">UP (<span id="count-up">0</span>)</button>
+              <button class="filter-btn text-danger" data-filter="DOWN">DOWN (<span id="count-down">0</span>)</button>
+            </div>
+
+            <!-- Export CSV -->
+            <a href="/api/export.csv" class="btn btn-outline" id="export-csv-btn" download>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Export CSV
+            </a>
+
+            <!-- Clear History -->
+            <button id="clear-history-btn" class="btn btn-danger-outline" title="Clear log history for fresh demo">
+              Clear Logs
+            </button>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="table-responsive">
+          <table class="data-table" id="history-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>UTC Timestamp</th>
+                <th>Endpoint</th>
+                <th>Status</th>
+                <th>HTTP Code</th>
+                <th>Latency</th>
+                <th>Details / Diagnostics</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <tr class="empty-row">
+                <td colspan="8">
+                  <div class="empty-state">
+                    <span class="empty-icon">📡</span>
+                    <p>No health checks recorded yet. Configure an endpoint and click "Check Now".</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="app-footer">
+        <div class="footer-left">
+          <span>PulseWatch © 2026 • BIT DevOps Community Hackathon Project</span>
+        </div>
+        <div class="footer-right">
+          <span>Python 3 • Flask • SQLite • Chart.js • Pure Vanilla JS</span>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- JavaScript Entry Point -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
