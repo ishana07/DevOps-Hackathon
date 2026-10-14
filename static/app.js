@@ -572,6 +572,11 @@ document.addEventListener('DOMContentLoaded', () => {
   elements.methodologyModal.addEventListener('click', (e) => {
     if (e.target === elements.methodologyModal) closeModal();
   });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && elements.methodologyModal.style.display === 'flex') {
+      closeModal();
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // Polling Loop & App Initialization

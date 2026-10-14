@@ -853,13 +853,102 @@ select:focus {
 }
 
 .formula-box {
-  background: var(--bg-card);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
   font-family: var(--font-mono);
+  font-size: 0.88rem;
+  margin: 0.6rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.formula-box .formula-math-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.formula-paren {
+  font-size: 1.35rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  line-height: 1;
+  user-select: none;
+}
+
+.formula-sigma {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0 0.15rem;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.sigma-symbol {
+  font-size: 1.55rem;
+  font-weight: 400;
+  color: var(--accent-cyan);
+  line-height: 1;
+  font-family: var(--font-sans);
+}
+
+.sigma-limit {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.sigma-upper {
+  margin-bottom: 1px;
+}
+
+.sigma-lower {
+  margin-top: 1px;
+}
+
+.formula-term {
+  font-weight: 600;
+  color: var(--text-primary);
   font-size: 0.85rem;
-  margin: 0.5rem 0;
-  border: 1px solid var(--border-subtle);
+}
+
+.formula-term sub {
+  font-size: 0.72em;
+  color: var(--accent-cyan);
+}
+
+.formula-minus {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0.15rem;
+}
+
+.formula-subnote {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  text-align: center;
+  margin-top: 0.35rem;
+}
+
+.formula-subnote em {
+  color: var(--accent-cyan);
+  font-style: normal;
 }
 
 .warning-callout {
@@ -1105,3 +1194,40 @@ select:focus {
   .main-content { padding: 1.5rem 1rem; }
   .charts-grid { flex-direction: column; }
 }
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+  .modal-card {
+    max-width: 100%;
+  }
+  .modal-header {
+    padding: 1rem 1.25rem;
+  }
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+  .modal-body {
+    padding: 1rem 1.25rem;
+    gap: 1rem;
+    max-height: 75vh;
+  }
+  .modal-footer {
+    padding: 0.75rem 1.25rem;
+  }
+  .formula-box {
+    padding: 0.65rem 0.75rem;
+  }
+  .formula-box .formula-math-display {
+    font-size: 0.8rem;
+    gap: 0.35rem;
+  }
+  .formula-fraction {
+    font-size: 0.78rem;
+  }
+  .formula-var {
+    font-size: 0.82rem;
+  }
+}
+

@@ -30,6 +30,7 @@ ALLOW_PRIVATE_IPS = os.environ.get("PULSEWATCH_ALLOW_PRIVATE_IPS", "false").lowe
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "pulsewatch-dev-secret-key-2026")
 app.config["DB_PATH"] = DB_PATH
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Track application start time
 APP_START_TIME = datetime.now(timezone.utc)

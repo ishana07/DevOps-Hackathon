@@ -32,19 +32,79 @@
       <div class="modal-body">
         <div class="methodology-section">
           <h4>1. Availability Percentage Formula</h4>
-          <p class="formula-box">$$\text{Availability } (\%) = \left(\frac{\text{Successful Checks (HTTP 2xx)}}{\text{Total Checks}}\right) \times 100$$</p>
+          <div class="formula-box">
+            <div class="formula-math-display" role="math" aria-label="Availability percentage equals successful checks HTTP 2xx divided by total checks, multiplied by 100">
+              <span class="formula-var">Availability (%)</span>
+              <span class="formula-eq">=</span>
+              <span class="formula-paren">(</span>
+              <div class="formula-fraction">
+                <span class="fraction-num">Successful Checks (HTTP 2xx)</span>
+                <span class="fraction-bar"></span>
+                <span class="fraction-den">Total Checks</span>
+              </div>
+              <span class="formula-paren">)</span>
+              <span class="formula-times">×</span>
+              <span class="formula-100">100</span>
+            </div>
+          </div>
           <p>A check is strictly classified as <strong>UP</strong> if and only if the HTTP response status code is within the <code>200–299</code> range. Any <code>3xx</code>, <code>4xx</code>, <code>5xx</code>, network drop, timeout, or DNS failure is classified as <strong>DOWN</strong>.</p>
         </div>
 
         <div class="methodology-section">
           <h4>2. Average Response Time</h4>
-          <p class="formula-box">$$\text{Avg Latency (ms)} = \frac{1}{N} \sum_{i=1}^{N} \text{Response Time}_i \quad \text{(for all valid responses)}$$</p>
+          <div class="formula-box">
+            <div class="formula-math-display" role="math" aria-label="Average Latency in milliseconds equals 1 over N times the summation from i=1 to N of Response Time i">
+              <span class="formula-var">Avg Latency (ms)</span>
+              <span class="formula-eq">=</span>
+              <div class="formula-fraction">
+                <span class="fraction-num">1</span>
+                <span class="fraction-bar"></span>
+                <span class="fraction-den">N</span>
+              </div>
+              <div class="formula-sigma" title="Summation from i=1 to N">
+                <span class="sigma-limit sigma-upper">N</span>
+                <span class="sigma-symbol">&sum;</span>
+                <span class="sigma-limit sigma-lower">i=1</span>
+              </div>
+              <span class="formula-term">Response Time<sub>i</sub></span>
+            </div>
+            <div class="formula-subnote">
+              <span>(Sum of all valid response latencies ÷ <em>N</em> valid responses)</span>
+            </div>
+          </div>
           <p>Calculated across all checks where a response was obtained. Connection drops and unresolvable network failures are excluded from latency averaging to prevent skew.</p>
         </div>
 
         <div class="methodology-section">
           <h4>3. Estimated Downtime vs. Continuous Outage</h4>
-          <p class="formula-box">$$\text{Estimated Downtime} = \text{Failed Checks Count} \times \text{Polling Interval (seconds)}$$</p>
+          <div class="formula-box">
+            <div class="formula-math-display" role="math" aria-label="Estimated Downtime equals Failed Checks Count multiplied by Polling Interval in seconds">
+              <span class="formula-var">Estimated Downtime</span>
+              <span class="formula-eq">=</span>
+              <span class="formula-term text-danger">Failed Checks Count</span>
+              <span class="formula-times">×</span>
+              <span class="formula-term">Polling Interval (seconds)</span>
+            </div>
+          </div>
+
+          <div class="formula-box" style="margin-top: 0.6rem;">
+            <div class="formula-math-display" role="math" aria-label="Observed Outage equals summation of contiguous DOWN failure periods">
+              <span class="formula-var">Observed Outage</span>
+              <span class="formula-eq">=</span>
+              <div class="formula-sigma" title="Sum over contiguous outages">
+                <span class="sigma-symbol">&sum;</span>
+              </div>
+              <span class="formula-paren">(</span>
+              <span class="formula-term text-success">Recovery Time (UP)</span>
+              <span class="formula-minus">−</span>
+              <span class="formula-term text-danger">Incident Start (DOWN)</span>
+              <span class="formula-paren">)</span>
+            </div>
+            <div class="formula-subnote">
+              <span>(Elapsed continuous time across contiguous outage windows)</span>
+            </div>
+          </div>
+
           <div class="warning-callout">
             <strong>Important Statistical Clarification for Judges:</strong>
             <p>Interval-sampled monitoring polls at discrete intervals (e.g., every 10s). If 3 consecutive checks fail with a 10s interval, the estimated downtime is <strong>30 seconds</strong>.</p>
