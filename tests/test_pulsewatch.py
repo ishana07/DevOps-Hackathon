@@ -315,7 +315,7 @@ class PulseWatchTestCase(unittest.TestCase):
         response = self.client.get("/api/export.csv")
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/csv", response.headers["Content-Type"])
-        self.assertIn("pulsewatch_report_", response.headers["Content-Disposition"])
+        self.assertIn("pulsewatch_history_", response.headers["Content-Disposition"])
 
         csv_text = response.data.decode("utf-8")
         lines = csv_text.strip().split("\r\n") if "\r\n" in csv_text else csv_text.strip().split("\n")
@@ -328,6 +328,35 @@ class PulseWatchTestCase(unittest.TestCase):
         # Verify Record Line
         self.assertIn("https://httpbin.org/status/200", lines[1])
         self.assertIn("UP", lines[1])
+
+    def test_sla_summary_csv_export(self):
+        """Test GET /api/export-sla.csv returns executive summary SLA CSV."""
+        record = {
+            "timestamp": "2026-10-14T12:00:00.000Z",
+            "endpoint": "https://httpbin.org/status/200",
+            "status_code": 200,
+            "response_time_ms": 45.1,
+            "status": "UP",
+            "error_message": None,
+            "check_type": "AUTOMATIC"
+        }
+        app._save_check_record(record)
+
+        # Test both direct route and ?type=summary
+        resp_direct = self.client.get("/api/export-sla.csv")
+        resp_param = self.client.get("/api/export.csv?type=summary")
+
+        for response in (resp_direct, resp_param):
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("text/csv", response.headers["Content-Type"])
+            self.assertIn("pulsewatch_sla_summary_", response.headers["Content-Disposition"])
+
+            csv_text = response.data.decode("utf-8")
+            self.assertIn("PulseWatch - Service Availability & SLA Summary Report", csv_text)
+            self.assertIn("Availability (%)", csv_text)
+            self.assertIn("Total Health Checks", csv_text)
+            self.assertIn("Estimated Downtime", csv_text)
+            self.assertIn("Reporting Scope", csv_text)
 
     # -------------------------------------------------------------------------
     # 11. API Error Responses & Input Validation

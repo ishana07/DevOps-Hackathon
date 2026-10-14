@@ -697,8 +697,12 @@ def api_history():
 
 
 @app.route("/api/export.csv", methods=["GET"])
+@app.route("/api/export/history.csv", methods=["GET"])
 def api_export_csv():
-    """Exports all recorded health checks as a timestamped CSV file."""
+    """Exports all recorded health checks as a timestamped CSV file (or summary if type=summary)."""
+    if request.args.get("type", "").lower() == "summary":
+        return api_export_sla_summary_csv()
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -736,8 +740,55 @@ def api_export_csv():
         ])
 
     csv_data = output.getvalue()
-    filename = f"pulsewatch_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"pulsewatch_history_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
     
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "text/csv; charset=utf-8"
+        }
+    )
+
+
+@app.route("/api/export-sla.csv", methods=["GET"])
+@app.route("/api/export/summary.csv", methods=["GET"])
+def api_export_sla_summary_csv():
+    """Exports executive SLA summary report as a timestamped CSV file."""
+    stats = calculate_sla_statistics()
+    config = get_all_config()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Document Header
+    writer.writerow(["PulseWatch - Service Availability & SLA Summary Report"])
+    writer.writerow(["Generated At (UTC)", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")])
+    writer.writerow([])
+
+    # Metrics Table
+    writer.writerow(["Metric", "Value", "Notes / Description"])
+    writer.writerow(["Monitored Endpoint", config.get("endpoint", ""), "Current target service URL"])
+    writer.writerow(["Reporting Scope", stats["record_range"], "Total sample window audited"])
+    writer.writerow(["Reporting Period", stats["reporting_period"], "Earliest to latest recorded timestamps"])
+    writer.writerow(["Total Health Checks", stats["total_checks"], "Aggregate count of all checks"])
+    writer.writerow(["Successful Checks (UP)", stats["successful_checks"], "HTTP status 200-299"])
+    writer.writerow(["Failed Checks (DOWN)", stats["failed_checks"], "Non-2xx, timeouts, network failures"])
+    writer.writerow(["Availability (%)", f"{stats['availability_percentage']}%", stats["sla_formula"]])
+    writer.writerow(["SLA Tier Classification", stats["sla_tier"], f"Status: {stats['sla_status']}"])
+    writer.writerow(["Average Response Time (ms)", f"{stats['average_response_time_ms']} ms", "Mean latency across responding probes"])
+    writer.writerow(["Minimum Response Time (ms)", f"{stats['min_response_time_ms']} ms", "Lowest observed latency"])
+    writer.writerow(["Maximum Response Time (ms)", f"{stats['max_response_time_ms']} ms", "Highest observed latency"])
+    writer.writerow(["Estimated Downtime", stats["estimated_downtime_formatted"], f"{stats['estimated_downtime_seconds']}s (Interval-sampled statistical estimate)"])
+    writer.writerow(["Observed Outage Duration", stats["observed_outage_formatted"], f"{stats['observed_outage_seconds']}s (Contiguous failure blocks)"])
+    writer.writerow([])
+    writer.writerow(["SLA Calculation Formula", stats["sla_formula"], "Availability (%) = (successful_checks / total_checks) * 100"])
+    writer.writerow(["Downtime Methodology Note", stats["downtime_explanation"], "Interval-sampled estimate vs true continuous outage"])
+
+    csv_data = output.getvalue()
+    filename = f"pulsewatch_sla_summary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+
     return Response(
         csv_data,
         mimetype="text/csv",
