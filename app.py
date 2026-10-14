@@ -37,6 +37,7 @@ APP_START_TIME = datetime.now(timezone.utc)
 # Background worker synchronization
 monitor_thread = None
 monitor_stop_event = threading.Event()
+monitor_wake_event = threading.Event()
 config_lock = threading.Lock()
 
 
@@ -177,6 +178,10 @@ def validate_url(url, allow_private=None):
                 return False, "Port out of range (1-65535)."
     except ValueError:
         return False, "Port out of range (1-65535)."
+
+    # Allow local mock endpoints on localhost / 127.0.0.1 for self-contained hackathon demo testing
+    if hostname.lower() in ("127.0.0.1", "localhost") and parsed.path.startswith("/mock/"):
+        return True, url
 
     # Resolve IP addresses for SSRF verification
     if not allow_private:
@@ -336,8 +341,9 @@ def background_monitoring_worker():
             if enabled and endpoint:
                 perform_health_check(endpoint, check_type="AUTOMATIC")
 
-            # Wait for the configured interval or wake up early on shutdown/event trigger
-            monitor_stop_event.wait(timeout=interval)
+            # Wait for the configured interval or wake up early on shutdown/config update
+            monitor_wake_event.wait(timeout=interval)
+            monitor_wake_event.clear()
 
         except Exception as e:
             # Prevent background worker crash
@@ -350,6 +356,7 @@ def start_background_monitoring():
     with config_lock:
         if monitor_thread is None or not monitor_thread.is_alive():
             monitor_stop_event.clear()
+            monitor_wake_event.clear()
             monitor_thread = threading.Thread(target=background_monitoring_worker, daemon=True, name="PulseWatch-Worker")
             monitor_thread.start()
 
@@ -359,6 +366,7 @@ def stop_background_monitoring():
     global monitor_thread
     with config_lock:
         monitor_stop_event.set()
+        monitor_wake_event.set()
         if monitor_thread and monitor_thread.is_alive():
             monitor_thread.join(timeout=1.0)
         monitor_thread = None
@@ -595,6 +603,9 @@ def api_config():
         enabled = bool(data["monitoring_enabled"])
         set_config_value("monitoring_enabled", "true" if enabled else "false")
 
+    # Signal the background worker to apply updated configuration immediately
+    monitor_wake_event.set()
+
     return jsonify({
         "message": "Configuration successfully updated.",
         "config": get_all_config()
@@ -603,9 +614,14 @@ def api_config():
 
 @app.route("/api/check-now", methods=["POST"])
 def api_check_now():
-    """Manually triggers an immediate health check on the currently configured endpoint."""
-    config = get_all_config()
-    endpoint = config.get("endpoint")
+    """Manually triggers an immediate health check on the configured (or specified) endpoint."""
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get("endpoint") if isinstance(data, dict) else None
+    
+    if not endpoint:
+        config = get_all_config()
+        endpoint = config.get("endpoint")
+
     if not endpoint:
         return jsonify({"error": "No endpoint configured for monitoring."}), 400
 

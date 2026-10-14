@@ -273,22 +273,22 @@
 
           <!-- Hackathon Quick Demo Presets -->
           <div class="demo-presets-row">
-            <span class="presets-label">⚡ Hackathon Demo Presets:</span>
+            <span class="presets-label">⚡ Quick Demo Presets:</span>
             <div class="presets-buttons">
-              <button type="button" class="preset-btn preset-success" data-url="/mock/status/200">
-                🟢 200 OK (Healthy)
+              <button type="button" class="preset-btn preset-success" data-url="https://httpbin.org/status/200">
+                🟢 200 OK (Public)
               </button>
-              <button type="button" class="preset-btn preset-error" data-url="/mock/status/500">
-                🔴 500 Server Error
+              <button type="button" class="preset-btn preset-error" data-url="https://httpbin.org/status/500">
+                🔴 500 Error (Public)
               </button>
-              <button type="button" class="preset-btn preset-warning" data-url="/mock/status/404">
+              <button type="button" class="preset-btn preset-warning" data-url="https://httpbin.org/status/404">
                 🟠 404 Not Found
               </button>
-              <button type="button" class="preset-btn preset-delay" data-url="/mock/delay/4">
-                🟡 High Latency (4s)
+              <button type="button" class="preset-btn preset-delay" data-url="https://httpbin.org/delay/6">
+                🟡 Timeout (&gt;5s)
               </button>
-              <button type="button" class="preset-btn preset-httpbin" data-url="https://httpbin.org/status/200">
-                🌐 Public HTTPBin
+              <button type="button" class="preset-btn preset-mock" data-url="/mock/status/200">
+                ⚡ Local Mock (200)
               </button>
             </div>
           </div>

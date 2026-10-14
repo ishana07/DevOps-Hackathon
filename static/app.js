@@ -412,7 +412,12 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.checkNowBtn.disabled = true;
 
     try {
-      const res = await fetch('/api/check-now', { method: 'POST' });
+      const targetEndpoint = elements.endpointInput.value.trim();
+      const res = await fetch('/api/check-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetEndpoint ? { endpoint: targetEndpoint } : {})
+      });
       const data = await res.json();
       
       if (!res.ok) {
