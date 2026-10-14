@@ -433,7 +433,7 @@ def calculate_sla_statistics():
         if start_fmt == end_fmt:
             reporting_period = f"Probed at {start_fmt}"
         else:
-            reporting_period = f"{start_fmt} – {end_fmt}"
+            reporting_period = f"{start_fmt} to {end_fmt}"
         record_range = f"All {total_checks} Recorded Samples"
     else:
         availability_pct = 100.0  # Default clean SLA state

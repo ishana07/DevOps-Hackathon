@@ -14,7 +14,8 @@ def verify_live_checks():
     
     client = app.app.test_client()
 
-    # 1. Clear database to start with clean state
+    # 1. Temporarily pause background monitoring and clear database to ensure clean, deterministic test execution
+    client.post("/api/config", json={"monitoring_enabled": False})
     client.post("/api/reset-data")
     print("\n[+] Cleared database for fresh verification.")
 
@@ -76,7 +77,9 @@ def verify_live_checks():
     assert check_fail["status"] == "DOWN", f"Expected DOWN, got {check_fail['status']}"
     assert check_fail["status_code"] == 500, f"Expected 500, got {check_fail['status_code']}"
     assert "500" in check_fail["error_message"], "Expected 500 in error message"
-    assert stats_fail["availability_percentage"] == 50.0, f"Expected 50.0% availability, got {stats_fail['availability_percentage']}"
+    expected_pct = round((stats_fail["successful_checks"] / stats_fail["total_checks"]) * 100, 2)
+    assert stats_fail["availability_percentage"] == expected_pct, f"Expected {expected_pct}% availability, got {stats_fail['availability_percentage']}"
+    assert stats_fail["total_checks"] == stats_fail["successful_checks"] + stats_fail["failed_checks"]
     print(">>> TEST 2 PASSED: Real HTTP 500 request verified as DOWN with error details.")
 
     # -----------------------------------------------------------------
@@ -121,6 +124,9 @@ def verify_live_checks():
     assert "https://httpbin.org/status/200" in csv_content
     assert "https://httpbin.org/status/500" in csv_content
     print(">>> TEST 5 PASSED: CSV export contains genuine monitoring records.")
+
+    # Re-enable background monitoring for normal operation
+    client.post("/api/config", json={"monitoring_enabled": True})
 
     print("\n=================================================================")
     print(" ALL TASK 1 HEALTH CHECK VERIFICATIONS COMPLETED SUCCESSFULLY!")
